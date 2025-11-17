@@ -14,5 +14,5 @@ export default defineConfig({
     port: 5075,
     host: true
   },
-  base: '/'
+  base: '/emp/'
 })

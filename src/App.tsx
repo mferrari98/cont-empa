@@ -99,17 +99,23 @@ function App() {
 
     // Generate simple order text
     const orderItems: string[] = []
+    let totalEmpanadas = 0
     flavors.forEach(flavor => {
       const count = flavorTotals[flavor]
       if (count > 0) {
+        totalEmpanadas += count
         // Replace 'Pic.' with 'picante' for display
         const displayName = flavor.toLowerCase().replace('pic.', 'picante')
         orderItems.push(`${count} ${displayName}`)
       }
     })
 
-    const orderText = orderItems.length > 0 ? orderItems.join(', ') : 'No se seleccionaron empanadas'
-    setOrderSummary(orderText)
+    if (orderItems.length > 0) {
+      const orderText = `Buenos dias, quiero hacer un pedido de ${totalEmpanadas} empanadas y serian: ${orderItems.join(', ')}`
+      setOrderSummary(orderText)
+    } else {
+      setOrderSummary('No se seleccionaron empanadas')
+    }
     setShowSummary(true)
   }
 
@@ -215,12 +221,24 @@ function App() {
                               className={`${personIndex === people.length - 1 ? '' : 'border-b'} border-l ${themeClasses.tableBorderLight} p-2 text-center min-w-[80px] align-middle`}
                             >
                               <input
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 min="0"
-                                max="20"
+                                max="9"
                                 value={orderQuantities[person][flavor] || ''}
-                                onChange={(e) => handleQuantityChange(person, flavor, e.target.value)}
-                                className={`w-full h-8 text-center font-mono text-base ${themeClasses.inputBg} ${themeClasses.text} border-0 focus:outline-none focus:ring-1 focus:ring-[#6ccff6] transition-colors [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  // Solo permitir números
+                                  if (value === '' || /^[0-9]*$/.test(value)) {
+                                    const numValue = parseInt(value) || 0;
+                                    // Limitar a máximo 9
+                                    if (numValue <= 9) {
+                                      handleQuantityChange(person, flavor, value);
+                                    }
+                                  }
+                                }}
+                                className={`w-full h-8 text-center font-mono text-base ${themeClasses.inputBg} ${themeClasses.text} border-0 focus:outline-none focus:ring-1 focus:ring-[#6ccff6] transition-colors`}
                                 placeholder=""
                               />
                             </td>
