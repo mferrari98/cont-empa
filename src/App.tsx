@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Moon, Sun, Shield } from "lucide-react"
+import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X } from "lucide-react"
 
 interface OrderQuantities {
   [key: string]: {
@@ -169,7 +169,7 @@ function App() {
           <div className="max-w-7xl mx-auto">
             {/* Header - aligned with table */}
             <div className="mb-6 mt-8 mx-auto max-w-5xl">
-              <h1 className={`text-5xl font-bold tracking-tight ${themeClasses.text} typewriter inline-block whitespace-nowrap`}>
+              <h1 className={`text-5xl font-bold tracking-tight ${themeClasses.text} inline-block whitespace-nowrap`}>
                 Emp
               </h1>
               <p className={`text-base mt-2 ${themeClasses.textSubtle}`}>
@@ -237,9 +237,13 @@ function App() {
             <div className="mt-3 max-w-5xl mx-auto flex justify-end gap-3">
               {hasSelections() && (
                 <Button
-                  onClick={handleClearAll}
+                  onClick={() => {
+                    handleClearAll();
+                    setShowSummary(false);
+                  }}
                   className="bg-white text-black hover:bg-gray-100 font-semibold py-3 min-w-[80px]"
                 >
+                  <Trash2 className="w-4 h-4 mr-2" />
                   Limpiar
                 </Button>
               )}
@@ -247,6 +251,7 @@ function App() {
                 onClick={generateOrder}
                 className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] font-semibold py-3 min-w-[80px]"
               >
+                <MessageSquare className="w-4 h-4 mr-2" />
                 Generar Pedido
               </Button>
             </div>
@@ -261,12 +266,24 @@ function App() {
                       {orderSummary}
                     </p>
                   </div>
-                  <div className="mt-3 flex justify-end">
+                  <div className="mt-3 flex justify-end gap-3">
                     <Button
                       onClick={() => setShowSummary(false)}
                       className="bg-white text-black hover:bg-gray-100 font-semibold px-6 py-2"
+                      style={{ color: 'black' }}
                     >
+                      <X className="w-4 h-4 mr-2" />
                       Cerrar
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(orderSummary);
+                      }}
+                      className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] font-semibold px-6 py-2"
+                      style={{ color: '#141413' }}
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copiar
                     </Button>
                   </div>
                 </CardContent>
