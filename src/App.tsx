@@ -166,9 +166,9 @@ function App() {
 
         {/* Main Content */}
         <div className="py-6 px-4 relative z-10">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             {/* Header - aligned with table */}
-            <div className="mb-6 mt-8 mx-auto max-w-4xl">
+            <div className="mb-6 mt-8 mx-auto max-w-5xl">
               <h1 className={`text-5xl font-bold tracking-tight ${themeClasses.text} typewriter inline-block whitespace-nowrap`}>
                 Emp
               </h1>
@@ -178,8 +178,8 @@ function App() {
             </div>
 
             {/* Excel-style Table with White Interior Lines - No Header Text */}
-            <Card className={`${themeClasses.bgCard} max-w-4xl mx-auto rounded-lg overflow-hidden`}>
-              <CardContent className="p-0">
+            <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto rounded-lg overflow-hidden`}>
+              <CardContent className="px-4 py-2">
                 <div className="overflow-x-auto">
                   <table className="w-full border-separate border-spacing-0">
                     <thead>
@@ -234,7 +234,7 @@ function App() {
             </Card>
 
             {/* Generate Order Button */}
-            <div className="mt-3 max-w-4xl mx-auto flex justify-end gap-3">
+            <div className="mt-3 max-w-5xl mx-auto flex justify-end gap-3">
               {hasSelections() && (
                 <Button
                   onClick={handleClearAll}
@@ -253,7 +253,7 @@ function App() {
 
             {/* Simple Order Summary */}
             {showSummary && (
-              <Card className={`${themeClasses.bgCard} max-w-4xl mx-auto mt-4`}>
+              <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto mt-4`}>
                 <CardContent className="p-4">
                   <h2 className={`text-lg font-semibold mb-3 ${themeClasses.text}`}>Pedido:</h2>
                   <div className={`p-3 rounded-md ${themeClasses.inputBg} border ${themeClasses.borderLight}`}>

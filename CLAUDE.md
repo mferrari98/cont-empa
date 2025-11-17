@@ -27,7 +27,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ## Development Commands
 
-All commands should be run from the `app/` directory:
+All commands should be run from the project root directory:
 
 ```bash
 # Development
@@ -53,7 +53,6 @@ npm run <script>         # Run any script defined in package.json
 
 ### Project Structure
 ```
-app/
 ├── src/
 │   ├── components/ui/    # Reusable UI components (Button, Card, Input, etc.)
 │   ├── lib/             # Utility functions
@@ -97,3 +96,5 @@ interface OrderQuantities {
 - No external API calls or backend dependencies
 - Responsive design with mobile-friendly table scrolling
 - Custom color scheme with cyan accent (`#6ccff6`)
+- Contains Portal Servicios style header with company branding
+- Uses "Redondeo" person for rounding calculations in order totals
