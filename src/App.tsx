@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, ArrowLeft, Send } from "lucide-react"
 
 interface OrderQuantities {
@@ -208,7 +209,7 @@ function App() {
             </div>
 
             {/* Excel-style Table with White Interior Lines - No Header Text */}
-            <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto rounded-lg overflow-hidden`}>
+            <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto rounded-lg overflow-hidden shadow-xl`}>
               <CardContent className="px-4 py-2">
                 <div className="overflow-x-auto">
                   <table className="w-full border-separate border-spacing-0">
@@ -283,15 +284,15 @@ function App() {
                     handleClearAll();
                     setShowSummary(false);
                   }}
-                  className="bg-white text-black hover:bg-gray-100 font-semibold py-3 min-w-[80px] cursor-pointer"
+                  size="icon"
+                  className="bg-white/90 text-black hover:bg-white/100 font-semibold cursor-pointer"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Limpiar
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               )}
               <Button
                 onClick={generateOrder}
-                className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] font-semibold py-3 min-w-[80px] cursor-pointer"
+                className="bg-[#6ccff6]/90 text-[#141413] hover:bg-[#6ccff6]/100 font-semibold py-3 min-w-[80px] cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Generar Pedido
@@ -300,37 +301,58 @@ function App() {
 
             {/* Simple Order Summary */}
             {showSummary && (
-              <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto mt-4`}>
-                <CardContent className="p-4">
-                  <h2 className={`text-lg font-semibold mb-3 ${themeClasses.text}`}>Pedido:</h2>
+              <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto mt-4 shadow-xl rounded-lg overflow-hidden`}>
+                <CardContent className="p-6">
+                  {/* Header Section */}
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/20">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full bg-[#6ccff6]/20 flex items-center justify-center`}>
+                        <MessageSquare className={`w-4 h-4 text-[#6ccff6]`} />
+                      </div>
+                      <div>
+                        <h2 className={`text-xl font-bold ${themeClasses.text}`}>Resumen del Pedido</h2>
+                        <p className={`text-sm ${themeClasses.textMuted}`}>Confirma y envía tu pedido</p>
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Provider Selector */}
-                  <div className="mb-4 flex items-center gap-3">
-                    <label className={`text-sm font-medium ${themeClasses.text}`}>Proveedor:</label>
-                    <select
-                      value={selectedProvider}
-                      onChange={(e) => setSelectedProvider(e.target.value)}
-                      className={`px-3 py-2 rounded-md ${themeClasses.inputBg} ${themeClasses.text} border ${themeClasses.border} focus:outline-none focus:ring-1 focus:ring-[#6ccff6] cursor-pointer`}
-                    >
-                      {providers.map(provider => (
-                        <option key={provider.name} value={provider.name}>
-                          {provider.name}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="mb-6 flex items-center gap-3">
+                    <label className={`text-sm ${themeClasses.text} font-bold text-left`}>Seleccionar Proveedor:</label>
+                    <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+                      <SelectTrigger className={`w-[200px] ${themeClasses.cellBg} ${themeClasses.text} cursor-pointer border-transparent focus:ring-2 focus:ring-[#6ccff6] transition-all duration-200`}>
+                        <SelectValue placeholder="Seleccionar proveedor" className="text-sm" />
+                      </SelectTrigger>
+                      <SelectContent className={`${themeClasses.bgCard} ${themeClasses.text} border ${themeClasses.border} shadow-lg`}>
+                        {providers.map(provider => (
+                          <SelectItem
+                            key={provider.name}
+                            value={provider.name}
+                            className={`text-sm ${themeClasses.text} cursor-pointer hover:${themeClasses.bgHover} transition-colors`}
+                          >
+                            {provider.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  <div className={`p-3 rounded-md ${themeClasses.inputBg} border ${themeClasses.borderLight}`}>
-                    <p className={`${themeClasses.text} font-mono leading-relaxed`}>
-                      {orderSummary}
-                    </p>
+                  {/* Order Content */}
+                  <div className="mb-6">
+                    <div className={`p-4 rounded-lg ${themeClasses.cellBg} shadow-inner`}>
+                      <p className={`${themeClasses.text} font-mono leading-relaxed text-sm`}>
+                        {orderSummary}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="mt-3 flex justify-end gap-3">
+                  {/* Action Buttons */}
+                  <div className="flex justify-end gap-3 pt-4 border-t border-white/20">
                     <Button
                       onClick={() => setShowSummary(false)}
-                      className="bg-white text-black hover:bg-gray-100 font-semibold px-4 py-2 cursor-pointer"
-                      style={{ color: 'black' }}
+                      variant="outline"
+                      size="icon"
+                      className={`cursor-pointer ${themeClasses.border} ${themeClasses.text}`}
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -338,14 +360,15 @@ function App() {
                       onClick={() => {
                         navigator.clipboard.writeText(orderSummary);
                       }}
-                      className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] font-semibold px-4 py-2 cursor-pointer"
-                      style={{ color: '#141413' }}
+                      size="icon"
+                      className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] cursor-pointer"
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
                     <Button
                       onClick={sendWhatsAppMessage}
-                      className="bg-green-500 text-white hover:bg-green-600 font-semibold px-4 py-2 cursor-pointer"
+                      size="icon"
+                      className="bg-green-500 text-white hover:bg-green-600 cursor-pointer"
                     >
                       <Send className="w-4 h-4" />
                     </Button>
