@@ -14,7 +14,11 @@ const people = ['Antonio', 'Hugo', 'Martín', 'Pablo', 'Javier', 'Matías', 'Red
 const flavors = ['Carne', 'Carne Pic.', 'Pollo', 'Pollo Pic.', 'JyQ', 'Caprese', 'Fugazetta']
 
 function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+  // Leer tema preferido desde localStorage, fallback a 'dark'
+  const savedTheme = localStorage.getItem('app-theme');
+  return (savedTheme === 'dark' ? 'dark' : savedTheme === 'light' ? 'light' : 'dark');
+})
   const [orderQuantities, setOrderQuantities] = useState<OrderQuantities>(() => {
     const initial: OrderQuantities = {}
     people.forEach(person => {
@@ -42,9 +46,41 @@ function App() {
     }
   }, [theme])
 
+  // Escuchar cambios de tema desde otras pestañas/aplicaciones
+  useEffect(() => {
+    const handleThemeEvent = (e: any) => {
+      if (e.detail?.theme && ['light', 'dark'].includes(e.detail.theme)) {
+        setTheme(e.detail.theme)
+      }
+    }
+
+    // Escuchar evento personalizado
+    window.addEventListener('themeChanged', handleThemeEvent)
+
+    // También escuchar cambios en storage (de otras pestañas)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'app-theme' && e.newValue) {
+        setTheme(e.newValue as 'light' | 'dark')
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+
+    return () => {
+      window.removeEventListener('themeChanged', handleThemeEvent)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
+
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark'
     setTheme(newTheme)
+    // Guardar en localStorage para persistencia
+    localStorage.setItem('app-theme', newTheme)
+    // Disparar evento para sincronizar otras pestañas
+    window.dispatchEvent(new CustomEvent('themeChanged', {
+      detail: { theme: newTheme }
+    }))
   }
 
   const sendWhatsAppMessage = () => {
@@ -285,14 +321,14 @@ function App() {
                     setShowSummary(false);
                   }}
                   size="icon"
-                  className="bg-white/90 text-black hover:bg-white/100 font-semibold cursor-pointer"
+                  className="bg-white/90 text-black hover:bg-white/100 font-semibold cursor-pointer shadow-md"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
               )}
               <Button
                 onClick={generateOrder}
-                className="bg-[#6ccff6]/90 text-[#141413] hover:bg-[#6ccff6]/100 font-semibold py-3 min-w-[80px] cursor-pointer"
+                className="bg-[#6ccff6]/90 text-[#141413] hover:bg-[#6ccff6]/100 font-semibold py-3 min-w-[80px] cursor-pointer shadow-md"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Generar Pedido
@@ -379,16 +415,18 @@ function App() {
 
             {/* Back to Portal Button - Same container as other buttons */}
             <div className="mt-6 max-w-5xl mx-auto flex justify-start">
-              <a
-                href="http://10.10.9.252"
+              <Button
+                onClick={() => {
+                  // Guardar tema actual antes de navegar
+                  localStorage.setItem('emp-theme', theme)
+                  // Redirigir al portal
+                  window.location.href = 'http://10.10.9.252'
+                }}
+                className={`${themeClasses.bgCard} ${themeClasses.text} border-2 ${themeClasses.border} hover:opacity-80 font-semibold py-3 px-3 cursor-pointer shadow-md`}
               >
-                <Button
-                  className={`${themeClasses.bgCard} ${themeClasses.text} border-2 ${themeClasses.border} hover:opacity-80 font-semibold py-3 px-3 cursor-pointer`}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Volver al Portal
-                </Button>
-              </a>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver al Portal
+              </Button>
             </div>
           </div>
         </div>
