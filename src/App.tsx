@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, ArrowLeft, Send } from "lucide-react"
+import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, ArrowLeft, Send, Plus } from "lucide-react"
 
 interface OrderQuantities {
   [key: string]: {
@@ -11,7 +11,7 @@ interface OrderQuantities {
 }
 
 const people = ['Antonio', 'Hugo', 'Martín', 'Pablo', 'Javier', 'Matías', 'Redondeo']
-const flavors = ['Carne', 'Carne Pic.', 'Pollo', 'Pollo Pic.', 'JyQ', 'Caprese', 'Fugazetta']
+const fixedFlavors = ['Carne', 'Carne Pic.', 'Pollo', 'Pollo Pic.', 'JyQ', 'Caprese', 'Fugazetta']
 
 function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -36,6 +36,13 @@ function App() {
     { name: 'Lo de Jacinto', phone: '+5492804003172' },
     { name: 'Halloween', phone: '+5492804450909' }
   ]
+
+  // Columnas personalizadas dinámicas
+  const [customColumns, setCustomColumns] = useState<string[]>([])
+  const maxCustomColumns = 6
+
+  // Combinar sabores fijos con personalizados dentro del componente
+  const allFlavors = [...fixedFlavors, ...customColumns]
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -90,6 +97,36 @@ function App() {
       const whatsappUrl = `https://wa.me/${provider.phone.replace(/\D/g, '')}?text=${encodedMessage}`
       window.open(whatsappUrl, '_blank')
     }
+  }
+
+  // Función para agregar una columna personalizada
+  const addCustomColumn = () => {
+    if (customColumns.length < maxCustomColumns) {
+      const newColumnName = `Gusto ${customColumns.length + 1}`
+      setCustomColumns([...customColumns, newColumnName])
+    }
+  }
+
+  // Función para actualizar el nombre de una columna personalizada
+  const updateCustomColumnName = (index: number, newName: string) => {
+    const updatedColumns = [...customColumns]
+    updatedColumns[index] = newName || `Gusto ${index + 1}`
+    setCustomColumns(updatedColumns)
+  }
+
+  // Función para limpiar todas las columnas personalizadas
+  const clearCustomColumns = () => {
+    setCustomColumns([])
+    // También limpiar los datos de esas columnas en el estado
+    const clearedOrder: OrderQuantities = {}
+    people.forEach(person => {
+      clearedOrder[person] = {}
+      // Mantener solo los datos de los sabores fijos
+      fixedFlavors.forEach(flavor => {
+        clearedOrder[person][flavor] = orderQuantities[person][flavor] || 0
+      })
+    })
+    setOrderQuantities(clearedOrder)
   }
 
   const handleQuantityChange = (person: string, flavor: string, value: string) => {
@@ -147,8 +184,8 @@ function App() {
 
     const flavorTotals: { [key: string]: number } = {}
 
-    // Calculate totals for each flavor
-    flavors.forEach(flavor => {
+    // Calculate totals for each flavor (fixed + custom)
+    allFlavors.forEach(flavor => {
       let total = 0
       people.forEach(person => {
         total += orderQuantities[person][flavor] || 0
@@ -159,12 +196,17 @@ function App() {
     // Generate simple order text
     const orderItems: string[] = []
     let totalEmpanadas = 0
-    flavors.forEach(flavor => {
+    allFlavors.forEach(flavor => {
       const count = flavorTotals[flavor]
       if (count > 0) {
         totalEmpanadas += count
         // Replace 'Pic.' with 'picante' for display
-        const displayName = flavor.toLowerCase().replace('pic.', 'picante')
+        let displayName = flavor.toLowerCase()
+        if (displayName.includes('pic.')) {
+          displayName = displayName.replace('pic.', 'picante')
+        }
+        // Capitalize first letter
+        displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1)
         orderItems.push(`${count} ${displayName}`)
       }
     })
@@ -244,22 +286,34 @@ function App() {
               </p>
             </div>
 
-            {/* Excel-style Table with White Interior Lines - No Header Text */}
+          {/* Excel-style Table with White Interior Lines - No Header Text */}
+          <div className="relative max-w-5xl mx-auto">
             <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto rounded-lg overflow-hidden shadow-xl`}>
               <CardContent className="px-4 py-2">
                 <div className="overflow-x-auto">
-                  <table className="w-full border-separate border-spacing-0">
+                  <table className="w-full border-separate border-spacing-0 min-w-[800px]">
                     <thead>
                       <tr className={`${themeClasses.bgCard}`}>
                         <th className={`w-24 font-bold text-left border-b ${themeClasses.tableBorderLight} ${themeClasses.text} text-sm px-3 py-3`}>
 
                         </th>
-                        {flavors.map((flavor) => (
+                        {allFlavors.map((flavor, index) => (
                           <th
                             key={flavor}
                             className={`font-bold text-center border-b border-l ${themeClasses.tableBorderLight} ${themeClasses.text} text-sm px-2 py-3 min-w-[80px]`}
                           >
-                            {flavor}
+                            {index >= fixedFlavors.length ? (
+                              <input
+                                key={`custom-input-${index}`}
+                                type="text"
+                                defaultValue={flavor}
+                                onBlur={(e) => updateCustomColumnName(index - fixedFlavors.length, e.target.value)}
+                                className={`bg-transparent border-none text-center ${themeClasses.text} text-sm font-bold w-full outline-none focus:${themeClasses.cellBg} focus:ring-1 focus:ring-[#6ccff6] rounded`}
+                                placeholder={`Gusto ${index - fixedFlavors.length + 1}`}
+                              />
+                            ) : (
+                              flavor
+                            )}
                           </th>
                         ))}
                       </tr>
@@ -276,7 +330,7 @@ function App() {
                           >
                             {person}
                           </td>
-                          {flavors.map((flavor) => (
+                          {allFlavors.map((flavor) => (
                             <td
                               key={`${person}-${flavor}`}
                               className={`${personIndex === people.length - 1 ? '' : 'border-b'} border-l ${themeClasses.tableBorderLight} p-2 text-center min-w-[80px] align-middle`}
@@ -312,27 +366,47 @@ function App() {
               </CardContent>
             </Card>
 
-            {/* Generate Order Button */}
+            
+            {/* Action Buttons */}
             <div className="mt-3 max-w-5xl mx-auto flex justify-end gap-3">
-              {hasSelections() && (
-                <Button
+              {(hasSelections() || customColumns.length > 0) && (
+                <button
                   onClick={() => {
+                    // Si hay columnas personalizadas, limpiarlas primero
+                    if (customColumns.length > 0) {
+                      clearCustomColumns();
+                    }
+                    // Luego limpiar todo el contenido
                     handleClearAll();
                     setShowSummary(false);
                   }}
-                  size="icon"
-                  className="bg-white/90 text-black hover:bg-white/100 font-semibold cursor-pointer shadow-md"
+                  className={`h-7 px-3 rounded cursor-pointer transition-colors flex items-center justify-center font-semibold ${
+                    theme === 'dark'
+                      ? 'text-white hover:bg-white/10'
+                      : 'text-black hover:bg-black/10'
+                  }`}
+                  title={customColumns.length > 0 ? "Limpiar contenido y columnas personalizadas" : "Limpiar contenido"}
                 >
                   <Trash2 className="w-4 h-4" />
-                </Button>
+                </button>
               )}
               <Button
-                onClick={generateOrder}
-                className="bg-[#6ccff6]/90 text-[#141413] hover:bg-[#6ccff6]/100 font-semibold py-3 min-w-[80px] cursor-pointer shadow-md"
+                onClick={addCustomColumn}
+                disabled={customColumns.length >= maxCustomColumns}
+                className="bg-green-500/54 text-white hover:bg-green-500/60 font-semibold py-3 px-3 cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                title={customColumns.length >= maxCustomColumns ? "Máximo 6 gustos personalizados" : "Agregar gusto personalizado"}
               >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Generar Pedido
+                Agregar Sabores
               </Button>
+              {hasSelections() && (
+                <Button
+                  onClick={generateOrder}
+                  className="bg-[#6ccff6]/60 text-white hover:bg-[#6ccff6]/70 font-semibold py-3 min-w-[80px] cursor-pointer shadow-md"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Generar Pedido
+                </Button>
+              )}
             </div>
 
             {/* Simple Order Summary */}
@@ -431,6 +505,7 @@ function App() {
           </div>
         </div>
       </div>
+    </div>
   )
 }
 
