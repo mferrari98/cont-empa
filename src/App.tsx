@@ -352,7 +352,7 @@ function App() {
                       onClick={() => setShowSummary(false)}
                       variant="outline"
                       size="icon"
-                      className={`cursor-pointer ${themeClasses.border} ${themeClasses.text}`}
+                      className={`cursor-pointer shadow-md ${themeClasses.border} ${themeClasses.text}`}
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -361,14 +361,14 @@ function App() {
                         navigator.clipboard.writeText(orderSummary);
                       }}
                       size="icon"
-                      className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] cursor-pointer"
+                      className="bg-[#6ccff6]/90 text-[#141413] hover:bg-[#6ccff6]/100 cursor-pointer shadow-md"
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
                     <Button
                       onClick={sendWhatsAppMessage}
                       size="icon"
-                      className="bg-green-500 text-white hover:bg-green-600 cursor-pointer"
+                      className="bg-green-500/90 text-white hover:bg-green-500/100 cursor-pointer shadow-md"
                     >
                       <Send className="w-4 h-4" />
                     </Button>
