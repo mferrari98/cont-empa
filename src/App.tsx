@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, ArrowLeft, Send, Plus } from "lucide-react"
+import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, ArrowLeft, Send } from "lucide-react"
 
 interface OrderQuantities {
   [key: string]: {
