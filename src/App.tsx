@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X } from "lucide-react"
+import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, ArrowLeft, Send } from "lucide-react"
 
 interface OrderQuantities {
   [key: string]: {
@@ -23,6 +23,14 @@ function App() {
   })
   const [orderSummary, setOrderSummary] = useState<string>('')
   const [showSummary, setShowSummary] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState('Sabor Tucumano')
+
+  const providers = [
+    { name: 'Sabor Tucumano', phone: '+5492804841540' },
+    { name: 'Los de 100pre', phone: '+5492804681142' },
+    { name: 'Lo de Jacinto', phone: '+5492804003172' },
+    { name: 'Halloween', phone: '+5492804450909' }
+  ]
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -36,6 +44,15 @@ function App() {
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark'
     setTheme(newTheme)
+  }
+
+  const sendWhatsAppMessage = () => {
+    const provider = providers.find(p => p.name === selectedProvider)
+    if (provider) {
+      const encodedMessage = encodeURIComponent(orderSummary)
+      const whatsappUrl = `https://wa.me/${provider.phone.replace(/\D/g, '')}?text=${encodedMessage}`
+      window.open(whatsappUrl, '_blank')
+    }
   }
 
   const handleQuantityChange = (person: string, flavor: string, value: string) => {
@@ -86,6 +103,11 @@ function App() {
   }
 
   const generateOrder = () => {
+    // Check if there are any selections
+    if (!hasSelections()) {
+      return // Don't show summary if nothing is selected
+    }
+
     const flavorTotals: { [key: string]: number } = {}
 
     // Calculate totals for each flavor
@@ -110,12 +132,8 @@ function App() {
       }
     })
 
-    if (orderItems.length > 0) {
-      const orderText = `Buenos dias, quiero hacer un pedido de ${totalEmpanadas} empanadas y serian: ${orderItems.join(', ')}`
-      setOrderSummary(orderText)
-    } else {
-      setOrderSummary('No se seleccionaron empanadas')
-    }
+    const orderText = `Buenos dias, quiero hacer un pedido de ${totalEmpanadas} empanadas y serian: ${orderItems.join(', ')}`
+    setOrderSummary(orderText)
     setShowSummary(true)
   }
 
@@ -147,12 +165,18 @@ function App() {
         <div className={`border-b ${themeClasses.borderLight} relative z-10`}>
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-md border flex items-center justify-center ${themeClasses.bgCard} ${themeClasses.border}`}>
+              <a
+                href="http://10.10.9.252"
+                className={`w-8 h-8 rounded-md border flex items-center justify-center ${themeClasses.bgCard} ${themeClasses.border} hover:opacity-80 transition-opacity cursor-pointer`}
+              >
                 <Shield className={`w-4 h-4 ${themeClasses.text}`} />
-              </div>
-              <span className={`text-base font-medium ${themeClasses.text}`}>
+              </a>
+              <a
+                href="http://10.10.9.252"
+                className={`text-base font-medium ${themeClasses.text} cursor-pointer`}
+              >
                 Telecomunicaciones y Automatismos
-              </span>
+              </a>
             </div>
 
             <div className="flex items-center gap-2">
@@ -161,7 +185,7 @@ function App() {
                 onClick={toggleTheme}
                 variant="outline"
                 size="icon"
-                className={`border-2 ${themeClasses.border} ${themeClasses.text} rounded-md h-8 w-8`}
+                className={`border-2 ${themeClasses.border} ${themeClasses.text} rounded-md h-8 w-8 cursor-pointer`}
               >
                 {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </Button>
@@ -259,7 +283,7 @@ function App() {
                     handleClearAll();
                     setShowSummary(false);
                   }}
-                  className="bg-white text-black hover:bg-gray-100 font-semibold py-3 min-w-[80px]"
+                  className="bg-white text-black hover:bg-gray-100 font-semibold py-3 min-w-[80px] cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Limpiar
@@ -267,7 +291,7 @@ function App() {
               )}
               <Button
                 onClick={generateOrder}
-                className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] font-semibold py-3 min-w-[80px]"
+                className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] font-semibold py-3 min-w-[80px] cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Generar Pedido
@@ -279,34 +303,70 @@ function App() {
               <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto mt-4`}>
                 <CardContent className="p-4">
                   <h2 className={`text-lg font-semibold mb-3 ${themeClasses.text}`}>Pedido:</h2>
+
+                  {/* Provider Selector */}
+                  <div className="mb-4 flex items-center gap-3">
+                    <label className={`text-sm font-medium ${themeClasses.text}`}>Proveedor:</label>
+                    <select
+                      value={selectedProvider}
+                      onChange={(e) => setSelectedProvider(e.target.value)}
+                      className={`px-3 py-2 rounded-md ${themeClasses.inputBg} ${themeClasses.text} border ${themeClasses.border} focus:outline-none focus:ring-1 focus:ring-[#6ccff6] cursor-pointer`}
+                    >
+                      {providers.map(provider => (
+                        <option key={provider.name} value={provider.name}>
+                          {provider.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className={`p-3 rounded-md ${themeClasses.inputBg} border ${themeClasses.borderLight}`}>
                     <p className={`${themeClasses.text} font-mono leading-relaxed`}>
                       {orderSummary}
                     </p>
                   </div>
+
                   <div className="mt-3 flex justify-end gap-3">
                     <Button
                       onClick={() => setShowSummary(false)}
-                      className="bg-white text-black hover:bg-gray-100 font-semibold px-6 py-2"
+                      className="bg-white text-black hover:bg-gray-100 font-semibold px-4 py-2 cursor-pointer"
                       style={{ color: 'black' }}
                     >
-                      <X className="w-4 h-4 mr-2" />
-                      Cerrar
+                      <X className="w-4 h-4" />
                     </Button>
                     <Button
                       onClick={() => {
                         navigator.clipboard.writeText(orderSummary);
                       }}
-                      className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] font-semibold px-6 py-2"
+                      className="bg-[#6ccff6] text-[#141413] hover:bg-[#5ab8e6] font-semibold px-4 py-2 cursor-pointer"
                       style={{ color: '#141413' }}
                     >
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copiar
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      onClick={sendWhatsAppMessage}
+                      className="bg-green-500 text-white hover:bg-green-600 font-semibold px-4 py-2 cursor-pointer"
+                    >
+                      <Send className="w-4 h-4" />
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             )}
+
+            {/* Back to Portal Button - Same container as other buttons */}
+            <div className="mt-6 max-w-5xl mx-auto flex justify-start">
+              <a
+                href="http://10.10.9.252"
+              >
+                <Button
+                  className={`${themeClasses.bgCard} ${themeClasses.text} border-2 ${themeClasses.border} hover:opacity-80 font-semibold py-3 px-3 cursor-pointer`}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver al Portal
+                </Button>
+              </a>
+            </div>
           </div>
         </div>
       </div>
