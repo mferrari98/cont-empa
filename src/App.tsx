@@ -15,8 +15,8 @@ const fixedFlavors = ['Carne', 'Carne Pic.', 'Pollo', 'Pollo Pic.', 'JyQ', 'Capr
 
 function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-  // Leer tema preferido desde localStorage, fallback a 'dark'
-  const savedTheme = localStorage.getItem('app-theme');
+  // Leer tema preferido desde localStorage (usando clave estándar portal_theme), fallback a 'dark'
+  const savedTheme = localStorage.getItem('portal_theme');
   return (savedTheme === 'dark' ? 'dark' : savedTheme === 'light' ? 'light' : 'dark');
 })
   const [orderQuantities, setOrderQuantities] = useState<OrderQuantities>(() => {
@@ -64,9 +64,9 @@ function App() {
     // Escuchar evento personalizado
     window.addEventListener('themeChanged', handleThemeEvent)
 
-    // También escuchar cambios en storage (de otras pestañas)
+    // También escuchar cambios en storage (de otras pestañas/aplicaciones)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'app-theme' && e.newValue) {
+      if (e.key === 'portal_theme' && e.newValue) {
         setTheme(e.newValue as 'light' | 'dark')
       }
     }
@@ -82,9 +82,9 @@ function App() {
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark'
     setTheme(newTheme)
-    // Guardar en localStorage para persistencia
-    localStorage.setItem('app-theme', newTheme)
-    // Disparar evento para sincronizar otras pestañas
+    // Guardar en localStorage con clave estándar para persistencia y sincronización entre apps
+    localStorage.setItem('portal_theme', newTheme)
+    // Disparar evento para sincronizar otras pestañas/aplicaciones
     window.dispatchEvent(new CustomEvent('themeChanged', {
       detail: { theme: newTheme }
     }))
@@ -491,9 +491,7 @@ function App() {
             <div className="mt-6 max-w-5xl mx-auto flex justify-start">
               <Button
                 onClick={() => {
-                  // Guardar tema actual antes de navegar
-                  localStorage.setItem('emp-theme', theme)
-                  // Redirigir al portal
+                  // El tema ya está guardado en portal_theme, solo redirigir
                   window.location.href = 'http://10.10.9.252'
                 }}
                 className={`${themeClasses.bgCard} ${themeClasses.text} border-2 ${themeClasses.border} hover:opacity-80 font-semibold py-3 px-3 cursor-pointer shadow-md`}
