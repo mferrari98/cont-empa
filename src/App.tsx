@@ -45,7 +45,7 @@ function App() {
 
   // Columnas personalizadas dinámicas
   const [customColumns, setCustomColumns] = useState<string[]>([])
-  const maxCustomColumns = 6
+  const maxCustomColumns = 4
 
   // Combinar sabores fijos con personalizados dentro del componente
   const allFlavors = [...fixedFlavors, ...customColumns]
@@ -194,6 +194,12 @@ function App() {
           [flavor]: quantity
         }
       }))
+      // Cerrar ventanas al modificar cantidades
+      setShowSummary(false)
+      setShowCostCalculator(false)
+      setTotalCost('')
+      setCostPerPerson({})
+      setStandardQuantity(0)
     }
   }
 
@@ -269,7 +275,7 @@ function App() {
 
     let orderText = `Buenos dias, quiero hacer un pedido de ${totalEmpanadas} empanadas y serian: ${orderItems.join(', ')}`
     if (selectedTime) {
-      orderText += ` para las ${selectedTime}`
+      orderText += ` para las ${selectedTime}hs`
     }
     setOrderSummary(orderText)
     setShowSummary(true)
@@ -315,7 +321,7 @@ function App() {
 
     let orderText = `Buenos dias, quiero hacer un pedido de ${totalEmpanadas} empanadas y serian: ${orderItems.join(', ')}`
     if (time) {
-      orderText += ` para las ${time}`
+      orderText += ` para las ${time}hs`
     }
     setOrderSummary(orderText)
   }
@@ -432,7 +438,7 @@ function App() {
 
           {/* Excel-style Table with White Interior Lines - No Header Text */}
           <div className="relative max-w-5xl mx-auto">
-            <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto rounded-lg overflow-hidden shadow-2xl`}>
+            <Card className={`${themeClasses.bgCard} max-w-5xl mx-auto rounded-lg overflow-hidden shadow-lg`}>
               <CardContent className="px-4 py-2">
                 <div className="overflow-x-auto">
                   <table className="w-full border-separate border-spacing-0 min-w-[800px]">
@@ -529,6 +535,10 @@ function App() {
                     // Luego limpiar todo el contenido
                     handleClearAll();
                     setShowSummary(false);
+                    setShowCostCalculator(false);
+                    setTotalCost('');
+                    setCostPerPerson({});
+                    setStandardQuantity(0);
                   }}
                   className={`h-7 px-3 rounded cursor-pointer transition-colors flex items-center justify-center font-semibold ${
                     theme === 'dark'
@@ -544,19 +554,18 @@ function App() {
                 onClick={addCustomColumn}
                 disabled={customColumns.length >= maxCustomColumns}
                 className="bg-green-500/54 text-white hover:bg-green-500/60 font-semibold py-3 px-3 cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                title={customColumns.length >= maxCustomColumns ? "Máximo 6 gustos personalizados" : "Agregar gusto personalizado"}
+                title={customColumns.length >= maxCustomColumns ? "Máximo 4 gustos personalizados" : "Agregar gusto personalizado"}
               >
                 Agregar gustos
               </Button>
-              {hasSelections() && (
-                <Button
-                  onClick={generateOrder}
-                  className="bg-[#6ccff6]/60 text-white hover:bg-[#6ccff6]/70 font-semibold py-3 min-w-[80px] cursor-pointer shadow-md"
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Generar Pedido
-                </Button>
-              )}
+              <Button
+                onClick={generateOrder}
+                disabled={!hasSelections()}
+                className="bg-[#6ccff6]/60 text-white hover:bg-[#6ccff6]/70 disabled:bg-gray-500/50 disabled:text-gray-400 disabled:cursor-not-allowed font-semibold py-3 min-w-[80px] cursor-pointer shadow-md"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Generar Pedido
+              </Button>
             </div>
 
             {/* Simple Order Summary */}
@@ -611,30 +620,62 @@ function App() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <label htmlFor="time-select" className={`text-sm ${themeClasses.text} font-bold text-left`}>Horario del pedido:</label>
+                      <label htmlFor="time-hour-select" className={`text-sm ${themeClasses.text} font-bold text-left`}>Horario del pedido:</label>
                       <div className="flex items-center gap-2">
-                        <input
-                          type="time"
-                          id="time-select"
-                          name="time-select"
-                          min="10:00"
-                          max="14:45"
-                          step="900"
-                          value={selectedTime}
+                        {/* Selector de hora */}
+                        <select
+                          id="time-hour-select"
+                          name="time-hour-select"
+                          value={selectedTime ? selectedTime.split(':')[0] : ''}
                           onChange={(e) => {
-                            setSelectedTime(e.target.value);
+                            const hour = e.target.value;
+                            const minute = selectedTime ? selectedTime.split(':')[1] : '00';
+                            const newTime = `${hour.padStart(2, '0')}:${minute}`;
+                            setSelectedTime(newTime);
                             // Regenerar el mensaje cuando cambia el horario
                             if (orderSummary && hasSelections()) {
-                              generateOrderWithTime(e.target.value);
+                              generateOrderWithTime(newTime);
                             }
                           }}
-                          className={`w-[200px] px-3 py-2 rounded ${themeClasses.cellBg} ${themeClasses.text} border-transparent focus:ring-2 focus:ring-[#6ccff6]`}
-                          style={{
-                            colorScheme: theme === 'dark' ? 'dark' : 'light',
-                            // Intentar forzar visualización PM en navegadores que lo soporten
+                          className={`w-[70px] px-2 py-2 rounded ${themeClasses.cellBg} ${themeClasses.text} border-transparent focus:ring-2 focus:ring-[#6ccff6] transition-all duration-200 cursor-pointer text-center`}
+                          aria-label="Seleccionar hora"
+                        >
+                          <option value="">hh</option>
+                          {Array.from({ length: 8 }, (_, i) => i + 7).map(hour => (
+                            <option key={hour} value={hour.toString().padStart(2, '0')}>
+                              {hour.toString().padStart(2, '0')}
+                            </option>
+                          ))}
+                        </select>
+
+                        <span className={`${themeClasses.text} font-bold text-lg mx-1`}>:</span>
+
+                        {/* Selector de minutos */}
+                        <select
+                          id="time-minute-select"
+                          name="time-minute-select"
+                          value={selectedTime ? selectedTime.split(':')[1] : ''}
+                          onChange={(e) => {
+                            const minute = e.target.value;
+                            const hour = selectedTime ? selectedTime.split(':')[0] : '13';
+                            const newTime = `${hour}:${minute}`;
+                            setSelectedTime(newTime);
+                            // Regenerar el mensaje cuando cambia el horario
+                            if (orderSummary && hasSelections()) {
+                              generateOrderWithTime(newTime);
+                            }
                           }}
-                          placeholder="13:00"
-                        />
+                          className={`w-[70px] px-2 py-2 rounded ${themeClasses.cellBg} ${themeClasses.text} border-transparent focus:ring-2 focus:ring-[#6ccff6] transition-all duration-200 cursor-pointer text-center`}
+                          aria-label="Seleccionar minutos"
+                        >
+                          <option value="">mm</option>
+                          {['00', '15', '30', '45'].map(minute => (
+                            <option key={minute} value={minute}>
+                              {minute}
+                            </option>
+                          ))}
+                        </select>
+
                         {selectedTime && (
                           <Button
                             onClick={() => {
@@ -648,6 +689,7 @@ function App() {
                             size="icon"
                             className={`h-8 w-8 cursor-pointer shadow-md ${themeClasses.border} ${themeClasses.text}`}
                             title="Limpiar hora"
+                            aria-label="Limpiar hora seleccionada"
                           >
                             <X className="w-3 h-3" />
                           </Button>
