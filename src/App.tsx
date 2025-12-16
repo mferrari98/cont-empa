@@ -395,13 +395,13 @@ function App() {
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <a
-                href="http://10.10.9.252"
+                href="/"
                 className={`w-8 h-8 rounded-md border flex items-center justify-center ${themeClasses.bgCard} ${themeClasses.border} hover:opacity-80 transition-opacity cursor-pointer`}
               >
                 <Shield className={`w-4 h-4 ${themeClasses.text}`} />
               </a>
               <a
-                href="http://10.10.9.252"
+                href="/"
                 className={`text-base font-medium ${themeClasses.text} cursor-pointer`}
               >
                 Telecomunicaciones y Automatismos
@@ -855,7 +855,7 @@ function App() {
               <Button
                 onClick={() => {
                   // El tema ya está guardado en portal_theme, solo redirigir
-                  window.location.href = 'http://10.10.9.252'
+                  window.location.href = '/'
                 }}
                 className={`${themeClasses.bgCard} ${themeClasses.text} border-2 ${themeClasses.border} hover:opacity-80 font-semibold py-3 px-3 cursor-pointer shadow-md`}
               >
