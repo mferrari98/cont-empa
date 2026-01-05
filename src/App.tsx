@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -10,9 +10,47 @@ interface OrderQuantities {
   }
 }
 
+type CostSummary = {
+  standard: { cost: number; units: number } | null
+  differences: Array<{ person: string; cost: number; units: number }>
+}
+
 const people = ['Antonio', 'Hugo', 'Martín', 'Pablo', 'Javier', 'Matías', 'Redondeo']
 const fixedFlavors = ['Carne', 'Carne Pic.', 'Pollo', 'Pollo Pic.', 'JyQ', 'Caprese', 'Fugazetta']
+const providers = [
+  { name: 'Sabor Tucumano', phone: '+5492804841540' },
+  { name: 'Los de 100pre', phone: '+5492804681142' },
+  { name: 'Lo de Jacinto', phone: '+5492804003172' },
+  { name: 'Halloween', phone: '+5492804450909' }
+]
+const defaultSelections: { [key: string]: { [key: string]: number } } = {
+  'Antonio': { 'Pollo': 2, 'Caprese': 1 },
+  'Hugo': { 'Carne': 2, 'Pollo': 1 },
+  'Martín': { 'Pollo': 3 },
+  'Pablo': { 'Pollo Pic.': 3 },
+  'Javier': { 'Carne': 2, 'JyQ': 1 },
+  'Matías': { 'Pollo': 2, 'Carne': 1 }
+}
+const maxCustomColumns = 4
+const MAX_QUANTITY = 100
+const hourOptions = Array.from({ length: 8 }, (_, i) => (i + 7).toString().padStart(2, '0'))
+const minuteOptions = ['00', '15', '30', '45']
 
+const formatFlavorName = (flavor: string) => {
+  let displayName = flavor.toLowerCase()
+  if (displayName.includes('pic.')) {
+    displayName = displayName.replace('pic.', 'picante')
+  }
+  return displayName.charAt(0).toUpperCase() + displayName.slice(1)
+}
+
+const createEmptyOrderQuantities = (): OrderQuantities => {
+  const initial: OrderQuantities = {}
+  people.forEach(person => {
+    initial[person] = {}
+  })
+  return initial
+}
 
 function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -20,35 +58,31 @@ function App() {
   const savedTheme = localStorage.getItem('portal_theme');
   return (savedTheme === 'dark' ? 'dark' : savedTheme === 'light' ? 'light' : 'dark');
 })
-  const [orderQuantities, setOrderQuantities] = useState<OrderQuantities>(() => {
-    const initial: OrderQuantities = {}
-    people.forEach(person => {
-      initial[person] = {}
-    })
-    return initial
-  })
+  const [orderQuantities, setOrderQuantities] = useState<OrderQuantities>(() => (
+    createEmptyOrderQuantities()
+  ))
   const [orderSummary, setOrderSummary] = useState<string>('')
   const [showSummary, setShowSummary] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState('Sabor Tucumano')
   const [selectedTime, setSelectedTime] = useState('13:00') // PM por defecto (1:00 PM)
   const [showCostCalculator, setShowCostCalculator] = useState(false)
+  const [selectedHour, selectedMinute] = useMemo(() => {
+    if (!selectedTime) {
+      return ['', '']
+    }
+
+    const [hour, minute] = selectedTime.split(':')
+    return [hour || '', minute || '']
+  }, [selectedTime])
   const [totalCost, setTotalCost] = useState('')
   const [costPerPerson, setCostPerPerson] = useState<{[key: string]: number}>({})
   const [standardQuantity, setStandardQuantity] = useState(0)
 
-  const providers = [
-    { name: 'Sabor Tucumano', phone: '+5492804841540' },
-    { name: 'Los de 100pre', phone: '+5492804681142' },
-    { name: 'Lo de Jacinto', phone: '+5492804003172' },
-    { name: 'Halloween', phone: '+5492804450909' }
-  ]
-
   // Columnas personalizadas dinámicas
   const [customColumns, setCustomColumns] = useState<string[]>([])
-  const maxCustomColumns = 4
 
   // Combinar sabores fijos con personalizados dentro del componente
-  const allFlavors = [...fixedFlavors, ...customColumns]
+  const allFlavors = useMemo(() => [...fixedFlavors, ...customColumns], [customColumns])
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -97,36 +131,53 @@ function App() {
   }
 
   const sendWhatsAppMessage = () => {
-    const provider = providers.find(p => p.name === selectedProvider)
-    if (provider) {
-      const encodedMessage = encodeURIComponent(orderSummary)
-      const whatsappUrl = `https://wa.me/${provider.phone.replace(/\D/g, '')}?text=${encodedMessage}`
-      window.open(whatsappUrl, '_blank')
+    if (!orderSummary.trim()) {
+      return false
     }
+
+    const provider = providers.find(p => p.name === selectedProvider)
+    if (!provider) {
+      return false
+    }
+
+    const encodedMessage = encodeURIComponent(orderSummary.trim())
+    const whatsappUrl = `https://wa.me/${provider.phone.replace(/\D/g, '')}?text=${encodedMessage}`
+    const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+    if (popup) {
+      popup.opener = null
+      return true
+    }
+
+    return false
   }
 
   const copyToClipboard = async (text: string) => {
     try {
+      const normalizedText = text.trim()
+      if (!normalizedText) {
+        return false
+      }
+
       // Try modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(normalizedText)
       } else {
         // Fallback for older browsers or non-secure contexts
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
+        const textArea = document.createElement('textarea')
+        textArea.value = normalizedText
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        textArea.style.top = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
       }
-      return true;
+      return true
     } catch (err) {
-      console.error('Failed to copy text: ', err);
-      return false;
+      console.error('Failed to copy text: ', err)
+      return false
     }
   }
 
@@ -135,6 +186,13 @@ function App() {
     setTimeout(() => {
       const element = document.getElementById(elementId);
       if (element) {
+        const prevDocScroll = document.documentElement.style.scrollBehavior;
+        const prevBodyScroll = document.body.style.scrollBehavior;
+
+        // Aplicar transición CSS adicional para mayor suavidad
+        document.documentElement.style.scrollBehavior = 'smooth';
+        document.body.style.scrollBehavior = 'smooth';
+
         // Scroll ultra suave con opciones personalizadas
         element.scrollIntoView({
           behavior: 'smooth',
@@ -142,9 +200,10 @@ function App() {
           inline: 'nearest'
         });
 
-        // Aplicar transición CSS adicional para mayor suavidad
-        document.documentElement.style.scrollBehavior = 'smooth';
-        document.body.style.scrollBehavior = 'smooth';
+        setTimeout(() => {
+          document.documentElement.style.scrollBehavior = prevDocScroll;
+          document.body.style.scrollBehavior = prevBodyScroll;
+        }, 500);
       }
     }, 300);
   }
@@ -154,38 +213,67 @@ function App() {
     scrollToElement('cost-calculator-card');
   }
 
+  const resetCostCalculatorState = () => {
+    setShowCostCalculator(false)
+    setTotalCost('')
+    setCostPerPerson({})
+    setStandardQuantity(0)
+  }
+
+  const resetDerivedState = () => {
+    setShowSummary(false)
+    resetCostCalculatorState()
+  }
+
   // Función para agregar una columna personalizada
   const addCustomColumn = () => {
-    if (customColumns.length < maxCustomColumns) {
-      const newColumnName = `Gusto ${customColumns.length + 1}`
-      setCustomColumns([...customColumns, newColumnName])
-    }
+    setCustomColumns(prev => {
+      if (prev.length >= maxCustomColumns) {
+        return prev
+      }
+
+      return [...prev, `Gusto ${prev.length + 1}`]
+    })
   }
 
   // Función para actualizar el nombre de una columna personalizada
   const updateCustomColumnName = (index: number, newName: string) => {
-    const updatedColumns = [...customColumns]
-    updatedColumns[index] = newName || `Gusto ${index + 1}`
-    setCustomColumns(updatedColumns)
+    const trimmedName = newName.trim()
+    const fallbackName = `Gusto ${index + 1}`
+    const oldName = customColumns[index]
+    const nextName = trimmedName || fallbackName
+
+    setCustomColumns(prev => {
+      const updatedColumns = [...prev]
+      updatedColumns[index] = nextName
+      return updatedColumns
+    })
+
+    if (!oldName || oldName === nextName) {
+      return
+    }
+
+    setOrderQuantities(prev => {
+      const updated: OrderQuantities = {}
+      people.forEach(person => {
+        const personOrders = { ...prev[person] }
+        if (Object.prototype.hasOwnProperty.call(personOrders, oldName)) {
+          const oldValue = personOrders[oldName] || 0
+          const nextValue = personOrders[nextName] || 0
+          personOrders[nextName] = oldValue + nextValue
+          delete personOrders[oldName]
+        }
+        updated[person] = personOrders
+      })
+      return updated
+    })
+
+    resetDerivedState()
   }
 
   // Función para limpiar todas las columnas personalizadas
-  const clearCustomColumns = () => {
-    setCustomColumns([])
-    // También limpiar los datos de esas columnas en el estado
-    const clearedOrder: OrderQuantities = {}
-    people.forEach(person => {
-      clearedOrder[person] = {}
-      // Mantener solo los datos de los sabores fijos
-      fixedFlavors.forEach(flavor => {
-        clearedOrder[person][flavor] = orderQuantities[person][flavor] || 0
-      })
-    })
-    setOrderQuantities(clearedOrder)
-  }
-
   const handleQuantityChange = (person: string, flavor: string, value: string) => {
-    const quantity = parseInt(value) || 0
+    const quantity = parseInt(value, 10) || 0
     if (quantity >= 0) {
       setOrderQuantities(prev => ({
         ...prev,
@@ -195,24 +283,11 @@ function App() {
         }
       }))
       // Cerrar ventanas al modificar cantidades
-      setShowSummary(false)
-      setShowCostCalculator(false)
-      setTotalCost('')
-      setCostPerPerson({})
-      setStandardQuantity(0)
+      resetDerivedState()
     }
   }
 
   const handlePersonClick = (person: string) => {
-    const defaultSelections: { [key: string]: { [key: string]: number } } = {
-      'Antonio': { 'Pollo': 2, 'Caprese': 1 },
-      'Hugo': { 'Carne': 2, 'Pollo': 1 },
-      'Martín': { 'Pollo': 3 },
-      'Pablo': { 'Pollo Pic.': 3 },
-      'Javier': { 'Carne': 2, 'JyQ': 1 },
-      'Matías': { 'Pollo': 2, 'Carne': 1 }
-    }
-
     if (defaultSelections[person]) {
       setOrderQuantities(prev => ({
         ...prev,
@@ -221,62 +296,86 @@ function App() {
           ...defaultSelections[person]
         }
       }))
+      resetDerivedState()
     }
   }
 
   const handleClearAll = () => {
-    const clearedOrder: OrderQuantities = {}
-    people.forEach(person => {
-      clearedOrder[person] = {}
-    })
-    setOrderQuantities(clearedOrder)
+    setOrderQuantities(createEmptyOrderQuantities())
+    resetDerivedState()
   }
 
-  const hasSelections = () => {
-    return people.some(person =>
+  const hasAnySelections = useMemo(() => (
+    people.some(person =>
       Object.values(orderQuantities[person] || {}).some(quantity => quantity > 0)
     )
+  ), [orderQuantities])
+
+  const getFlavorTotals = (flavors: string[]) => {
+    const totals: { [key: string]: number } = {}
+    flavors.forEach(flavor => {
+      totals[flavor] = people.reduce((sum, person) => (
+        sum + (orderQuantities[person][flavor] || 0)
+      ), 0)
+    })
+    return totals
   }
 
-  const generateOrder = () => {
-    // Check if there are any selections
-    if (!hasSelections()) {
-      return // Don't show summary if nothing is selected
-    }
+  const getPersonTotals = () => {
+    const totals: { [key: string]: number } = {}
+    people.forEach(person => {
+      const total = allFlavors.reduce((sum, flavor) => (
+        sum + (orderQuantities[person][flavor] || 0)
+      ), 0)
 
-    const flavorTotals: { [key: string]: number } = {}
-
-    // Calculate totals for each flavor (fixed + custom)
-    allFlavors.forEach(flavor => {
-      let total = 0
-      people.forEach(person => {
-        total += orderQuantities[person][flavor] || 0
-      })
-      flavorTotals[flavor] = total
+      if (total > 0) {
+        totals[person] = total
+      }
     })
+    return totals
+  }
+
+  const buildOrderSummary = (time: string) => {
+    const flavorTotals = getFlavorTotals(allFlavors)
 
     // Generate simple order text
     const orderItems: string[] = []
     let totalEmpanadas = 0
-    allFlavors.forEach(flavor => {
-      const count = flavorTotals[flavor]
+
+    Object.entries(flavorTotals).forEach(([flavor, count]) => {
       if (count > 0) {
         totalEmpanadas += count
-        // Replace 'Pic.' with 'picante' for display
-        let displayName = flavor.toLowerCase()
-        if (displayName.includes('pic.')) {
-          displayName = displayName.replace('pic.', 'picante')
-        }
-        // Capitalize first letter
-        displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1)
-        orderItems.push(`${count} ${displayName}`)
+        orderItems.push(`${count} ${formatFlavorName(flavor)}`)
       }
     })
 
-    let orderText = `Buenos dias, quiero hacer un pedido de ${totalEmpanadas} empanadas y serian: ${orderItems.join(', ')}`
-    if (selectedTime) {
-      orderText += ` para las ${selectedTime}hs`
+    if (totalEmpanadas === 0) {
+      return ''
     }
+
+    let orderText = `Buenos dias, quiero hacer un pedido de ${totalEmpanadas} empanadas y serian: ${orderItems.join(', ')}`
+    if (time) {
+      orderText += ` para las ${time}hs`
+    }
+
+    return orderText
+  }
+
+  const shouldUpdateSummary = showSummary && hasAnySelections && orderSummary.trim().length > 0
+
+  const generateOrder = () => {
+    // Check if there are any selections
+    if (!hasAnySelections) {
+      return // Don't show summary if nothing is selected
+    }
+
+    const orderText = buildOrderSummary(selectedTime)
+    if (!orderText) {
+      setShowSummary(false)
+      setOrderSummary('')
+      return
+    }
+
     setOrderSummary(orderText)
     setShowSummary(true)
 
@@ -286,74 +385,67 @@ function App() {
 
   const generateOrderWithTime = (time: string) => {
     // Check if there are any selections
-    if (!hasSelections()) {
+    if (!hasAnySelections) {
       return // Don't show summary if nothing is selected
     }
 
-    const flavorTotals: { [key: string]: number } = {}
-
-    // Calculate totals for each flavor (fixed + custom)
-    allFlavors.forEach(flavor => {
-      let total = 0
-      people.forEach(person => {
-        total += orderQuantities[person][flavor] || 0
-      })
-      flavorTotals[flavor] = total
-    })
-
-    // Generate simple order text
-    const orderItems: string[] = []
-    let totalEmpanadas = 0
-    allFlavors.forEach(flavor => {
-      const count = flavorTotals[flavor]
-      if (count > 0) {
-        totalEmpanadas += count
-        // Replace 'Pic.' with 'picante' for display
-        let displayName = flavor.toLowerCase()
-        if (displayName.includes('pic.')) {
-          displayName = displayName.replace('pic.', 'picante')
-        }
-        // Capitalize first letter
-        displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1)
-        orderItems.push(`${count} ${displayName}`)
-      }
-    })
-
-    let orderText = `Buenos dias, quiero hacer un pedido de ${totalEmpanadas} empanadas y serian: ${orderItems.join(', ')}`
-    if (time) {
-      orderText += ` para las ${time}hs`
+    const summary = buildOrderSummary(time)
+    if (!summary) {
+      setShowSummary(false)
+      setOrderSummary('')
+      return
     }
-    setOrderSummary(orderText)
+
+    setOrderSummary(summary)
+  }
+
+  const updateSelectedTime = (nextTime: string) => {
+    setSelectedTime(nextTime)
+    if (shouldUpdateSummary) {
+      generateOrderWithTime(nextTime)
+    }
   }
 
   const calculateCostPerPerson = () => {
     const cost = parseFloat(totalCost)
-    if (isNaN(cost) || cost <= 0) return
+    if (isNaN(cost) || cost <= 0) {
+      setCostPerPerson({})
+      setStandardQuantity(0)
+      return
+    }
 
-    const personTotals: { [key: string]: number } = {}
-    let mostCommonQuantity = 0
+    const personTotals = getPersonTotals()
+    const totals = Object.values(personTotals)
+
+    if (totals.length === 0) {
+      setCostPerPerson({})
+      setStandardQuantity(0)
+      return
+    }
+
     const quantityCount: { [key: string]: number } = {}
+    let mostCommonQuantity = 0
+    let mostCommonCount = 0
 
-    // Calculate total empanadas per person
-    people.forEach(person => {
-      let personTotal = 0
-      allFlavors.forEach(flavor => {
-        personTotal += orderQuantities[person][flavor] || 0
-      })
+    totals.forEach(personTotal => {
+      const newCount = (quantityCount[personTotal] || 0) + 1
+      quantityCount[personTotal] = newCount
 
-      if (personTotal > 0) {
-        personTotals[person] = personTotal
-        quantityCount[personTotal] = (quantityCount[personTotal] || 0) + 1
-
-        // Track most common quantity
-        if (quantityCount[personTotal] > (quantityCount[mostCommonQuantity] || 0)) {
-          mostCommonQuantity = personTotal
-        }
+      if (newCount > mostCommonCount) {
+        mostCommonCount = newCount
+        mostCommonQuantity = personTotal
       }
     })
 
     // Calculate cost per empanada
-    const totalEmpanadas = Object.values(personTotals).reduce((sum, count) => sum + count, 0)
+    const totalEmpanadas = totals.reduce((sum, count) => sum + count, 0)
+
+    if (totalEmpanadas === 0) {
+      setCostPerPerson({})
+      setStandardQuantity(0)
+      return
+    }
+
     const costPerEmpanada = cost / totalEmpanadas
 
     // Calculate individual costs
@@ -366,7 +458,30 @@ function App() {
     setCostPerPerson(individualCosts)
   }
 
-  const themeClasses = {
+  const hasCostResults = Object.keys(costPerPerson).length > 0
+
+  const costSummary: CostSummary = useMemo(() => {
+    if (!hasCostResults) {
+      return { standard: null, differences: [] }
+    }
+
+    let standard: CostSummary['standard'] = null
+    const differences: CostSummary['differences'] = []
+
+    Object.entries(costPerPerson).forEach(([person, cost]) => {
+      const personTotal = Object.values(orderQuantities[person] || {}).reduce((sum, qty) => sum + qty, 0)
+
+      if (personTotal === standardQuantity && !standard) {
+        standard = { cost, units: standardQuantity }
+      } else {
+        differences.push({ person, cost, units: personTotal })
+      }
+    })
+
+    return { standard, differences }
+  }, [hasCostResults, costPerPerson, orderQuantities, standardQuantity])
+
+  const themeClasses = useMemo(() => ({
     bg: theme === 'dark' ? 'bg-[#141413]' : 'bg-[#FAF9F5]',
     bgCard: theme === 'dark' ? 'bg-[#1F1E1D]' : 'bg-[#E8E8E8]',
     text: theme === 'dark' ? 'text-[#E5E4E0]' : 'text-[#141413]',
@@ -385,7 +500,7 @@ function App() {
     headerBg: theme === 'dark' ? 'bg-[#333330]' : 'bg-[#F0F0F0]',
     tableBorder: theme === 'dark' ? 'border-[#40403C]' : 'border-[#D0D0D0]',
     tableBorderLight: theme === 'dark' ? 'border-white/30' : 'border-black/12',
-  }
+  }), [theme])
 
   return (
     <div className={`min-h-screen gradient-background relative`}>
@@ -496,15 +611,16 @@ function App() {
                                 name={`quantity-${person}-${flavor}`}
                                 aria-label={`Cantidad de ${flavor} para ${person}`}
                                 min="0"
-                                max="9"
+                                max={MAX_QUANTITY}
+                                maxLength={String(MAX_QUANTITY).length}
                                 value={orderQuantities[person][flavor] || ''}
                                 onChange={(e) => {
                                   const value = e.target.value;
                                   // Solo permitir números
                                   if (value === '' || /^[0-9]*$/.test(value)) {
-                                    const numValue = parseInt(value) || 0;
-                                    // Limitar a máximo 100
-                                    if (numValue <= 100) {
+                                    const numValue = parseInt(value, 10) || 0;
+                                    // Limitar a máximo configurado
+                                    if (numValue <= MAX_QUANTITY) {
                                       handleQuantityChange(person, flavor, value);
                                     }
                                   }
@@ -525,20 +641,14 @@ function App() {
             
             {/* Action Buttons */}
             <div className="mt-3 max-w-5xl mx-auto flex justify-end gap-3">
-              {(hasSelections() || customColumns.length > 0) && (
+              {(hasAnySelections || customColumns.length > 0) && (
                 <button
+                  type="button"
                   onClick={() => {
-                    // Si hay columnas personalizadas, limpiarlas primero
                     if (customColumns.length > 0) {
-                      clearCustomColumns();
+                      setCustomColumns([])
                     }
-                    // Luego limpiar todo el contenido
-                    handleClearAll();
-                    setShowSummary(false);
-                    setShowCostCalculator(false);
-                    setTotalCost('');
-                    setCostPerPerson({});
-                    setStandardQuantity(0);
+                    handleClearAll()
                   }}
                   className={`h-7 px-3 rounded cursor-pointer transition-colors flex items-center justify-center font-semibold ${
                     theme === 'dark'
@@ -560,7 +670,7 @@ function App() {
               </Button>
               <Button
                 onClick={generateOrder}
-                disabled={!hasSelections()}
+                disabled={!hasAnySelections}
                 className="bg-[#6ccff6]/60 text-white hover:bg-[#6ccff6]/70 disabled:bg-gray-500/50 disabled:text-gray-400 disabled:cursor-not-allowed font-semibold py-3 min-w-[80px] cursor-pointer shadow-md"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
@@ -588,6 +698,7 @@ function App() {
                       variant="outline"
                       size="icon"
                       className={`cursor-pointer shadow-md ${themeClasses.border} ${themeClasses.text} ml-auto`}
+                      aria-label="Cerrar resumen"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -626,24 +737,25 @@ function App() {
                         <select
                           id="time-hour-select"
                           name="time-hour-select"
-                          value={selectedTime ? selectedTime.split(':')[0] : ''}
+                          value={selectedHour}
                           onChange={(e) => {
                             const hour = e.target.value;
-                            const minute = selectedTime ? selectedTime.split(':')[1] : '00';
-                            const newTime = `${hour.padStart(2, '0')}:${minute}`;
-                            setSelectedTime(newTime);
-                            // Regenerar el mensaje cuando cambia el horario
-                            if (orderSummary && hasSelections()) {
-                              generateOrderWithTime(newTime);
+                            if (!hour) {
+                              updateSelectedTime('')
+                              return;
                             }
+
+                            const minute = selectedMinute || '00';
+                            const newTime = `${hour.padStart(2, '0')}:${minute}`;
+                            updateSelectedTime(newTime)
                           }}
                           className={`w-[70px] px-2 py-2 rounded ${themeClasses.cellBg} ${themeClasses.text} border-transparent focus:ring-2 focus:ring-[#6ccff6] transition-all duration-200 cursor-pointer text-center`}
                           aria-label="Seleccionar hora"
                         >
                           <option value="">hh</option>
-                          {Array.from({ length: 8 }, (_, i) => i + 7).map(hour => (
-                            <option key={hour} value={hour.toString().padStart(2, '0')}>
-                              {hour.toString().padStart(2, '0')}
+                          {hourOptions.map(hour => (
+                            <option key={hour} value={hour}>
+                              {hour}
                             </option>
                           ))}
                         </select>
@@ -654,22 +766,23 @@ function App() {
                         <select
                           id="time-minute-select"
                           name="time-minute-select"
-                          value={selectedTime ? selectedTime.split(':')[1] : ''}
+                          value={selectedMinute}
                           onChange={(e) => {
                             const minute = e.target.value;
-                            const hour = selectedTime ? selectedTime.split(':')[0] : '13';
-                            const newTime = `${hour}:${minute}`;
-                            setSelectedTime(newTime);
-                            // Regenerar el mensaje cuando cambia el horario
-                            if (orderSummary && hasSelections()) {
-                              generateOrderWithTime(newTime);
+                            if (!minute) {
+                              updateSelectedTime('')
+                              return;
                             }
+
+                            const hour = selectedHour || '13';
+                            const newTime = `${hour}:${minute}`;
+                            updateSelectedTime(newTime)
                           }}
                           className={`w-[70px] px-2 py-2 rounded ${themeClasses.cellBg} ${themeClasses.text} border-transparent focus:ring-2 focus:ring-[#6ccff6] transition-all duration-200 cursor-pointer text-center`}
                           aria-label="Seleccionar minutos"
                         >
                           <option value="">mm</option>
-                          {['00', '15', '30', '45'].map(minute => (
+                          {minuteOptions.map(minute => (
                             <option key={minute} value={minute}>
                               {minute}
                             </option>
@@ -679,11 +792,7 @@ function App() {
                         {selectedTime && (
                           <Button
                             onClick={() => {
-                              setSelectedTime('');
-                              // Regenerar el mensaje cuando se elimina el horario
-                              if (orderSummary && hasSelections()) {
-                                generateOrderWithTime('');
-                              }
+                              updateSelectedTime('')
                             }}
                             variant="outline"
                             size="icon"
@@ -709,26 +818,32 @@ function App() {
 
                   {/* Action Buttons */}
                   <div className="flex justify-end gap-3 pt-4 border-t border-white/20">
-                    <Button
-                      onClick={async () => {
-                        const success = await copyToClipboard(orderSummary);
-                        if (success) {
-                          showCostCalculatorWithScroll();
-                        }
-                      }}
-                      size="icon"
-                      className="bg-[#6ccff6]/60 text-white hover:bg-[#6ccff6]/70 cursor-pointer shadow-md"
-                    >
+                  <Button
+                    onClick={async () => {
+                      const success = await copyToClipboard(orderSummary);
+                      if (success) {
+                        showCostCalculatorWithScroll();
+                      }
+                    }}
+                    size="icon"
+                    className="bg-[#6ccff6]/60 text-white hover:bg-[#6ccff6]/70 cursor-pointer shadow-md"
+                    aria-label="Copiar pedido"
+                  >
+
                       <Copy className="w-4 h-4" />
                     </Button>
-                    <Button
-                      onClick={() => {
-                        sendWhatsAppMessage();
+                  <Button
+                    onClick={() => {
+                      const sent = sendWhatsAppMessage();
+                      if (sent) {
                         showCostCalculatorWithScroll();
-                      }}
-                      size="icon"
-                      className="bg-green-500/54 text-white hover:bg-green-500/60 cursor-pointer shadow-md"
-                    >
+                      }
+                    }}
+                    size="icon"
+                    className="bg-green-500/54 text-white hover:bg-green-500/60 cursor-pointer shadow-md"
+                    aria-label="Enviar pedido por WhatsApp"
+                  >
+
                       <Send className="w-4 h-4" />
                     </Button>
                   </div>
@@ -752,15 +867,11 @@ function App() {
                       </div>
                     </div>
                     <Button
-                      onClick={() => {
-                        setShowCostCalculator(false);
-                        setTotalCost('');
-                        setCostPerPerson({});
-                        setStandardQuantity(0);
-                      }}
+                      onClick={resetCostCalculatorState}
                       variant="outline"
                       size="icon"
                       className={`cursor-pointer shadow-md ${themeClasses.border} ${themeClasses.text}`}
+                      aria-label="Cerrar calculadora de costos"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -769,46 +880,27 @@ function App() {
                   {/* Cost Calculator Layout */}
                   <div className="flex gap-6 mb-6">
                     {/* Cost Results - Left Side */}
-                    {Object.keys(costPerPerson).length > 0 && (
+                    {hasCostResults && (
                       <div className="flex-1">
                         <div className={`p-4 rounded-lg ${themeClasses.cellBg} shadow-inner h-full`}>
                           <div className={`space-y-2 ${themeClasses.text} font-mono leading-relaxed text-sm`}>
-                            {(() => {
-                              let costStandardPerson = null;
-                              let costDifferences = [];
-
-                              for (const [person, cost] of Object.entries(costPerPerson)) {
-                                const personTotal = Object.values(orderQuantities[person]).reduce((sum, qty) => sum + qty, 0);
-
-                                if (personTotal === standardQuantity && !costStandardPerson) {
-                                  costStandardPerson = { cost, units: standardQuantity };
-                                } else if (personTotal !== standardQuantity) {
-                                  costDifferences.push({ person, cost, units: personTotal });
-                                }
-                              }
-
-                              return (
-                                <>
-                                  {costStandardPerson && (
-                                    <div className="font-bold">
-                                      Costo por persona ({costStandardPerson.units} unidades): ${costStandardPerson.cost}
-                                    </div>
-                                  )}
-                                  {costDifferences.map(({ person, cost, units }) => (
-                                    <div key={person} className="ml-4">
-                                      {person} ({units} unidades): ${cost}
-                                    </div>
-                                  ))}
-                                </>
-                              );
-                            })()}
+                            {costSummary.standard && (
+                              <div className="font-bold">
+                                Costo por persona ({costSummary.standard.units} unidades): ${costSummary.standard.cost}
+                              </div>
+                            )}
+                            {costSummary.differences.map(({ person, cost, units }) => (
+                              <div key={person} className="ml-4">
+                                {person} ({units} unidades): ${cost}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
                     )}
 
                     {/* Cost Input - Right Side */}
-                    <div className={`${Object.keys(costPerPerson).length > 0 ? 'w-80' : 'w-full'}`}>
+                    <div className={`${hasCostResults ? 'w-80' : 'w-full'}`}>
                       <label htmlFor="total-cost-input" className={`text-sm ${themeClasses.text} font-bold text-left block mb-3`}>Valor Total del Pedido:</label>
                       <div className="space-y-3">
                         <div className="relative">
@@ -858,6 +950,7 @@ function App() {
                   window.location.href = '/'
                 }}
                 className={`${themeClasses.bgCard} ${themeClasses.text} border-2 ${themeClasses.border} hover:opacity-80 font-semibold py-3 px-3 cursor-pointer shadow-md`}
+                aria-label="Volver al Portal"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Volver al Portal
