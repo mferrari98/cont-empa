@@ -517,7 +517,7 @@ function App() {
               </a>
               <a
                 href="/"
-                className={`text-base font-medium ${themeClasses.text} cursor-pointer`}
+                className={`text-base font-medium ${themeClasses.text} cursor-pointer transition-opacity hover:opacity-80`}
               >
                 Telecomunicaciones y Automatismos
               </a>
@@ -544,7 +544,7 @@ function App() {
             {/* Header - aligned with table */}
             <div className="mb-6 mt-8 mx-auto max-w-5xl">
               <h1 className={`text-5xl font-bold tracking-tight ${themeClasses.text} inline-block whitespace-nowrap`}>
-                Emp
+                Pedidos
               </h1>
               <p className={`text-base mt-2 ${themeClasses.textSubtle}`}>
                 Sistema de gestión
