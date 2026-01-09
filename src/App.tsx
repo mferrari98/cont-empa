@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, ArrowLeft, Send } from "lucide-react"
+import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, ArrowLeft, Send, QrCode } from "lucide-react"
+import QRCode from "qrcode"
 
 interface OrderQuantities {
   [key: string]: {
@@ -63,8 +64,10 @@ function App() {
   ))
   const [orderSummary, setOrderSummary] = useState<string>('')
   const [showSummary, setShowSummary] = useState(false)
+  const [showQr, setShowQr] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState('')
   const [selectedProvider, setSelectedProvider] = useState('Sabor Tucumano')
-  const [selectedTime, setSelectedTime] = useState('13:00') // PM por defecto (1:00 PM)
+  const [selectedTime, setSelectedTime] = useState('')
   const [showCostCalculator, setShowCostCalculator] = useState(false)
   const [selectedHour, selectedMinute] = useMemo(() => {
     if (!selectedTime) {
@@ -83,6 +86,20 @@ function App() {
 
   // Combinar sabores fijos con personalizados dentro del componente
   const allFlavors = useMemo(() => [...fixedFlavors, ...customColumns], [customColumns])
+  const whatsappUrl = useMemo(() => {
+    const trimmedSummary = orderSummary.trim()
+    if (!trimmedSummary) {
+      return ''
+    }
+
+    const provider = providers.find(p => p.name === selectedProvider)
+    if (!provider) {
+      return ''
+    }
+
+    const encodedMessage = encodeURIComponent(trimmedSummary)
+    return `https://wa.me/${provider.phone.replace(/\D/g, '')}?text=${encodedMessage}`
+  }, [orderSummary, selectedProvider])
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -119,6 +136,43 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!showSummary || !orderSummary.trim()) {
+      setShowQr(false)
+    }
+  }, [showSummary, orderSummary])
+
+  useEffect(() => {
+    let active = true
+
+    if (!showQr || !whatsappUrl) {
+      setQrDataUrl('')
+      return () => {
+        active = false
+      }
+    }
+
+    QRCode.toDataURL(whatsappUrl, {
+      width: 240,
+      margin: 1
+    })
+      .then((url) => {
+        if (active) {
+          setQrDataUrl(url)
+        }
+      })
+      .catch((err) => {
+        console.error('Error al generar QR:', err)
+        if (active) {
+          setQrDataUrl('')
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [showQr, whatsappUrl])
+
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark'
     setTheme(newTheme)
@@ -131,17 +185,10 @@ function App() {
   }
 
   const sendWhatsAppMessage = () => {
-    if (!orderSummary.trim()) {
+    if (!whatsappUrl) {
       return false
     }
 
-    const provider = providers.find(p => p.name === selectedProvider)
-    if (!provider) {
-      return false
-    }
-
-    const encodedMessage = encodeURIComponent(orderSummary.trim())
-    const whatsappUrl = `https://wa.me/${provider.phone.replace(/\D/g, '')}?text=${encodedMessage}`
     const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
     if (popup) {
       popup.opener = null
@@ -774,8 +821,12 @@ function App() {
                               return;
                             }
 
-                            const hour = selectedHour || '13';
-                            const newTime = `${hour}:${minute}`;
+                            if (!selectedHour) {
+                              updateSelectedTime('')
+                              return;
+                            }
+
+                            const newTime = `${selectedHour}:${minute}`;
                             updateSelectedTime(newTime)
                           }}
                           className={`w-[70px] px-2 py-2 rounded ${themeClasses.cellBg} ${themeClasses.text} border-transparent focus:ring-2 focus:ring-[#6ccff6] transition-all duration-200 cursor-pointer text-center`}
@@ -818,34 +869,99 @@ function App() {
 
                   {/* Action Buttons */}
                   <div className="flex justify-end gap-3 pt-4 border-t border-white/20">
-                  <Button
-                    onClick={async () => {
-                      const success = await copyToClipboard(orderSummary);
-                      if (success) {
-                        showCostCalculatorWithScroll();
-                      }
-                    }}
-                    size="icon"
-                    className="bg-[#6ccff6]/60 text-white hover:bg-[#6ccff6]/70 cursor-pointer shadow-md"
-                    aria-label="Copiar pedido"
-                  >
-
+                    <Button
+                      onClick={async () => {
+                        const success = await copyToClipboard(orderSummary);
+                        if (success) {
+                          showCostCalculatorWithScroll();
+                        }
+                      }}
+                      size="icon"
+                      className="bg-[#6ccff6]/60 text-white hover:bg-[#6ccff6]/70 cursor-pointer shadow-md"
+                      aria-label="Copiar pedido"
+                    >
                       <Copy className="w-4 h-4" />
                     </Button>
-                  <Button
-                    onClick={() => {
-                      const sent = sendWhatsAppMessage();
-                      if (sent) {
-                        showCostCalculatorWithScroll();
-                      }
-                    }}
-                    size="icon"
-                    className="bg-green-500/54 text-white hover:bg-green-500/60 cursor-pointer shadow-md"
-                    aria-label="Enviar pedido por WhatsApp"
-                  >
+                    <Button
+                      onClick={() => {
+                        if (!whatsappUrl) {
+                          return
+                        }
 
+                        if (!showQr) {
+                          setShowQr(true)
+                          setShowCostCalculator(true)
+                          scrollToElement('whatsapp-qr-card')
+                          return
+                        }
+
+                        setShowQr(false)
+                      }}
+                      size="icon"
+                      className="bg-amber-500/54 text-white hover:bg-amber-500/60 cursor-pointer shadow-md"
+                      aria-label={showQr ? "Ocultar QR de WhatsApp" : "Generar QR de WhatsApp"}
+                    >
+                      <QrCode className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        const sent = sendWhatsAppMessage();
+                        if (sent) {
+                          showCostCalculatorWithScroll();
+                        }
+                      }}
+                      size="icon"
+                      className="bg-green-500/54 text-white hover:bg-green-500/60 cursor-pointer shadow-md"
+                      aria-label="Enviar pedido por WhatsApp"
+                    >
                       <Send className="w-4 h-4" />
                     </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* QR Window */}
+            {showQr && whatsappUrl && (
+              <Card id="whatsapp-qr-card" className={`${themeClasses.bgCard} max-w-5xl mx-auto mt-4 shadow-2xl rounded-lg overflow-hidden`}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/20">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center`}>
+                        <QrCode className={`w-4 h-4 text-amber-500`} />
+                      </div>
+                      <div>
+                        <h2 className={`text-xl font-bold ${themeClasses.text}`}>QR de WhatsApp</h2>
+                        <p className={`text-sm ${themeClasses.textMuted}`}>
+                          Escaneá este código para abrir el chat con el mensaje del pedido listo para enviar.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => setShowQr(false)}
+                      variant="outline"
+                      size="icon"
+                      className={`cursor-pointer shadow-md ${themeClasses.border} ${themeClasses.text}`}
+                      aria-label="Cerrar QR de WhatsApp"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <div className={`p-4 rounded-lg ${themeClasses.cellBg} shadow-inner`}>
+                      {qrDataUrl ? (
+                        <img
+                          src={qrDataUrl}
+                          alt="QR de WhatsApp para el pedido"
+                          className="w-52 h-52"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-52 h-52 flex items-center justify-center">
+                          <span className={`text-xs ${themeClasses.textMuted}`}>Generando QR...</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
