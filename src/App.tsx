@@ -1061,15 +1061,14 @@ function App() {
             {/* Back to Portal Button - Same container as other buttons */}
             <div className="mt-6 max-w-5xl mx-auto flex justify-start">
               <Button
-                onClick={() => {
-                  // El tema ya está guardado en portal_theme, solo redirigir
-                  window.location.href = '/'
-                }}
+                asChild
                 className={`${themeClasses.bgCard} ${themeClasses.text} border-2 ${themeClasses.border} hover:opacity-80 font-semibold py-3 px-3 cursor-pointer shadow-md`}
                 aria-label="Volver al Portal"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver al Portal
+                <a href="/">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver al Portal
+                </a>
               </Button>
             </div>
           </div>
