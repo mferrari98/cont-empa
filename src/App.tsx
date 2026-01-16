@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, ArrowLeft, Send, QrCode } from "lucide-react"
+import { Moon, Sun, Shield, Trash2, MessageSquare, Copy, X, Home, Send, QrCode } from "lucide-react"
 import QRCode from "qrcode"
 
 interface OrderQuantities {
@@ -16,7 +16,7 @@ type CostSummary = {
   differences: Array<{ person: string; cost: number; units: number }>
 }
 
-const people = ['Antonio', 'Hugo', 'Martín', 'Pablo', 'Javier', 'Matías', 'Redondeo']
+const people = ['Antonio', 'Hugo', 'Javier', 'Martín', 'Matías', 'Pablo', 'Redondeo']
 const fixedFlavors = ['Carne', 'Carne Pic.', 'Pollo', 'Pollo Pic.', 'JyQ', 'Caprese', 'Fugazetta']
 const providers = [
   { name: 'Sabor Tucumano', phone: '+5492804841540' },
@@ -541,6 +541,8 @@ function App() {
     bgHover: theme === 'dark' ? 'hover:bg-[#1F1E1D]' : 'hover:bg-[#F5F4F0]',
     iconBg: theme === 'dark' ? 'bg-[#141413]' : 'bg-white',
     inputBg: theme === 'dark' ? 'bg-[#1F1E1D]' : 'bg-[#E8E8E8]',
+    inputAlt: theme === 'dark' ? 'bg-[#1A1A19]' : 'bg-[#C5C5C5]',
+    rowAlt: theme === 'dark' ? 'bg-[#1A1A19]' : 'bg-[#C5C5C5]',
     accent: 'bg-[#6ccff6]',
     cellBg: theme === 'dark' ? 'bg-[#2A2A28]' : 'bg-[#F8F8F8]',
     cellHover: theme === 'dark' ? 'hover:bg-[#333330]' : 'hover:bg-[#EFEFEF]',
@@ -571,6 +573,18 @@ function App() {
             </div>
 
             <div className="flex items-center gap-2">
+              <Button
+                asChild
+                variant="outline"
+                className={`${themeClasses.bgCard} ${themeClasses.text} border-2 ${themeClasses.border} hover:opacity-80 font-semibold h-8 cursor-pointer`}
+                aria-label="Volver al Portal"
+              >
+                <a href="/">
+                  <Home className="w-4 h-4 mr-2" />
+                  Volver al Portal
+                </a>
+              </Button>
+
               {/* Theme Toggle */}
               <Button
                 onClick={toggleTheme}
@@ -634,51 +648,56 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {people.map((person, personIndex) => (
-                        <tr
-                          key={person}
-                          className={`${themeClasses.bgCard}`}
-                        >
-                          <td
-                            className={`font-medium ${personIndex === people.length - 1 ? '' : `border-b ${themeClasses.tableBorderLight}`} ${themeClasses.text} sticky left-0 ${themeClasses.bgCard} z-10 text-sm px-3 py-2 cursor-pointer hover:opacity-80`}
-                            onClick={() => handlePersonClick(person)}
+                      {people.map((person, personIndex) => {
+                        const rowBg = personIndex % 2 === 0 ? themeClasses.bgCard : themeClasses.rowAlt
+                        const rowInputBg = personIndex % 2 === 0 ? themeClasses.inputBg : themeClasses.inputAlt
+
+                        return (
+                          <tr
+                            key={person}
+                            className={rowBg}
                           >
-                            {person}
-                          </td>
-                          {allFlavors.map((flavor) => (
                             <td
-                              key={`${person}-${flavor}`}
-                              className={`${personIndex === people.length - 1 ? '' : 'border-b'} border-l ${themeClasses.tableBorderLight} p-2 text-center min-w-[80px] align-middle`}
+                              className={`font-medium ${personIndex === people.length - 1 ? '' : `border-b ${themeClasses.tableBorderLight}`} ${themeClasses.text} sticky left-0 ${rowBg} z-10 text-sm px-3 py-2 cursor-pointer hover:opacity-80`}
+                              onClick={() => handlePersonClick(person)}
                             >
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                id={`quantity-${person}-${flavor}`}
-                                name={`quantity-${person}-${flavor}`}
-                                aria-label={`Cantidad de ${flavor} para ${person}`}
-                                min="0"
-                                max={MAX_QUANTITY}
-                                maxLength={String(MAX_QUANTITY).length}
-                                value={orderQuantities[person][flavor] || ''}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  // Solo permitir números
-                                  if (value === '' || /^[0-9]*$/.test(value)) {
-                                    const numValue = parseInt(value, 10) || 0;
-                                    // Limitar a máximo configurado
-                                    if (numValue <= MAX_QUANTITY) {
-                                      handleQuantityChange(person, flavor, value);
-                                    }
-                                  }
-                                }}
-                                className={`w-full h-8 text-center font-mono text-base ${themeClasses.inputBg} ${themeClasses.text} border-0 focus:outline-none focus:ring-1 focus:ring-[#6ccff6] transition-colors [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none`}
-                                placeholder=""
-                              />
+                              {person}
                             </td>
-                          ))}
-                        </tr>
-                      ))}
+                            {allFlavors.map((flavor) => (
+                              <td
+                                key={`${person}-${flavor}`}
+                                className={`${personIndex === people.length - 1 ? '' : 'border-b'} border-l ${themeClasses.tableBorderLight} p-2 text-center min-w-[80px] align-middle`}
+                              >
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  id={`quantity-${person}-${flavor}`}
+                                  name={`quantity-${person}-${flavor}`}
+                                  aria-label={`Cantidad de ${flavor} para ${person}`}
+                                  min="0"
+                                  max={MAX_QUANTITY}
+                                  maxLength={String(MAX_QUANTITY).length}
+                                  value={orderQuantities[person][flavor] || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    // Solo permitir números
+                                    if (value === '' || /^[0-9]*$/.test(value)) {
+                                      const numValue = parseInt(value, 10) || 0;
+                                      // Limitar a máximo configurado
+                                      if (numValue <= MAX_QUANTITY) {
+                                        handleQuantityChange(person, flavor, value);
+                                      }
+                                    }
+                                  }}
+                                  className={`w-full h-8 text-center font-mono text-[1.3rem] ${rowInputBg} ${themeClasses.text} border-0 focus:outline-none focus:ring-1 focus:ring-[#6ccff6] transition-colors [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none`}
+                                  placeholder=""
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1058,25 +1077,12 @@ function App() {
               </Card>
             )}
 
-            {/* Back to Portal Button - Same container as other buttons */}
-            <div className="mt-6 max-w-5xl mx-auto flex justify-start">
-              <Button
-                asChild
-                className={`${themeClasses.bgCard} ${themeClasses.text} border-2 ${themeClasses.border} hover:opacity-80 font-semibold py-3 px-3 cursor-pointer shadow-md`}
-                aria-label="Volver al Portal"
-              >
-                <a href="/">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Volver al Portal
-                </a>
-              </Button>
-            </div>
           </div>
         </div>
-
-        {/* Espacio permanente para scroll y centrado de ventanas */}
-        <div className="h-96" /> {/* 96 (24rem) = 384px de espacio extra permanente */}
       </div>
+
+      {/* Espacio permanente para scroll y centrado de ventanas */}
+      <div className="h-96" /> {/* 96 (24rem) = 384px de espacio extra permanente */}
     </div>
   )
 }
