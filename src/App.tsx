@@ -493,12 +493,32 @@ function App() {
       return
     }
 
-    const costPerEmpanada = cost / totalEmpanadas
+    const costCents = Math.round(cost * 100)
+    const perPerson = Object.entries(personTotals).map(([person, quantity]) => {
+      const exactCost = (costCents * quantity) / totalEmpanadas
+      const cents = Math.floor(exactCost)
+      return {
+        person,
+        cents,
+        remainder: exactCost - cents,
+      }
+    })
+
+    // Distribute rounding cents so totals match the input cost.
+    let remainingCents = costCents - perPerson.reduce((sum, item) => sum + item.cents, 0)
+    remainingCents = Math.max(0, Math.round(remainingCents))
+
+    if (remainingCents > 0 && perPerson.length > 0) {
+      const sortedByRemainder = [...perPerson].sort((a, b) => b.remainder - a.remainder)
+      for (let i = 0; i < remainingCents; i++) {
+        sortedByRemainder[i % sortedByRemainder.length].cents += 1
+      }
+    }
 
     // Calculate individual costs
     const individualCosts: { [key: string]: number } = {}
-    Object.entries(personTotals).forEach(([person, quantity]) => {
-      individualCosts[person] = Math.round(costPerEmpanada * quantity)
+    perPerson.forEach(({ person, cents }) => {
+      individualCosts[person] = Number((cents / 100).toFixed(2))
     })
 
     setStandardQuantity(mostCommonQuantity)
@@ -518,11 +538,14 @@ function App() {
     Object.entries(costPerPerson).forEach(([person, cost]) => {
       const personTotal = Object.values(orderQuantities[person] || {}).reduce((sum, qty) => sum + qty, 0)
 
-      if (personTotal === standardQuantity && !standard) {
-        standard = { cost, units: standardQuantity }
-      } else {
-        differences.push({ person, cost, units: personTotal })
+      if (personTotal === standardQuantity) {
+        if (!standard) {
+          standard = { cost, units: standardQuantity }
+        }
+        return
       }
+
+      differences.push({ person, cost, units: personTotal })
     })
 
     return { standard, differences }
