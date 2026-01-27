@@ -627,6 +627,11 @@ function App() {
           <div className="max-w-7xl mx-auto">
             {/* Header - aligned with table */}
             <div className="mb-6 mt-8 mx-auto max-w-5xl">
+              <div className={`text-sm ${themeClasses.textMuted} flex items-center gap-2`}>
+                <a href="/" className="hover:underline">Portal</a>
+                <span>/</span>
+                <span>Pedidos</span>
+              </div>
               <h1 className={`text-5xl font-bold tracking-tight ${themeClasses.text} inline-block whitespace-nowrap`}>
                 Pedidos
               </h1>
